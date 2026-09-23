@@ -16,47 +16,110 @@ const _edge = Color(0xFF3B3B3B);
 const _yellow = Color(0xFFF7C948);
 const _purple = Color(0xFFA880F5);
 
+/// A flat-top hexagon with softened corners, centred on the origin.
+Path _hex(double r, {double corner = 0}) {
+  final points = [
+    for (var k = 0; k < 6; k++)
+      Offset(math.cos(k * math.pi / 3) * r, math.sin(k * math.pi / 3) * r),
+  ];
+  final path = Path();
+  if (corner <= 0) {
+    for (var i = 0; i < 6; i++) {
+      i == 0 ? path.moveTo(points[i].dx, points[i].dy) : path.lineTo(points[i].dx, points[i].dy);
+    }
+    return path..close();
+  }
+  // Cut each corner back along both edges and round it with a quadratic.
+  for (var i = 0; i < 6; i++) {
+    final prev = points[(i + 5) % 6];
+    final cur = points[i];
+    final next = points[(i + 1) % 6];
+    final into = cur + (prev - cur) / (prev - cur).distance * corner;
+    final out = cur + (next - cur) / (next - cur).distance * corner;
+    i == 0 ? path.moveTo(into.dx, into.dy) : path.lineTo(into.dx, into.dy);
+    path.quadraticBezierTo(cur.dx, cur.dy, out.dx, out.dy);
+  }
+  return path..close();
+}
+
+/// The icon: one bold hexagon token carrying the game's X symbol, with a
+/// captured opponent token tucked behind it. Kept to a few big shapes so it
+/// still reads at 48 px in a launcher.
+///
 /// [inset] is the fraction of the canvas the artwork may use (adaptive icons
 /// need to stay inside the central safe zone).
 Future<List<int>> _render(int px, {required bool background, double inset = 0.8}) async {
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder);
   final size = px.toDouble();
-  if (background) canvas.drawRect(Rect.fromLTWH(0, 0, size, size), Paint()..color = _bg);
-  final s = size * inset / 5.2;
   final c = Offset(size / 2, size / 2);
-  const cells = [(0, 0), (1, 0), (1, -1), (0, -1), (-1, 0), (-1, 1), (0, 1)];
-  const owners = [0, 0, 1, -1, 0, -1, 0];
-  for (var i = 0; i < cells.length; i++) {
-    final (q, r) = cells[i];
-    final center = c + Offset(1.5 * q * s, math.sqrt(3) * (r + q / 2) * s);
-    final path = Path();
-    for (var k = 0; k < 6; k++) {
-      final a = k * math.pi / 3;
-      final o = center + Offset(math.cos(a), math.sin(a)) * s * 0.92;
-      k == 0 ? path.moveTo(o.dx, o.dy) : path.lineTo(o.dx, o.dy);
-    }
-    path.close();
-    canvas.drawPath(path, Paint()..color = _cell);
+  if (background) {
+    canvas.drawRect(Rect.fromLTWH(0, 0, size, size), Paint()..color = _bg);
+    // A soft lift behind the badge so the dark square isn't completely flat.
+    canvas.drawCircle(
+      c,
+      size * 0.46,
+      Paint()
+        ..shader = ui.Gradient.radial(c, size * 0.46, [
+          const Color(0xFF262626),
+          _bg,
+        ], [0.0, 1.0]),
+    );
+  }
+
+  final r = size * inset * 0.5;
+  canvas.save();
+  canvas.translate(c.dx, c.dy);
+
+  // Board hexes peeking out behind, hinting at the grid.
+  for (final dir in [0, 2, 4]) {
+    final a = dir * math.pi / 3 + math.pi / 6;
+    final o = Offset(math.cos(a), math.sin(a)) * r * 0.80;
+    canvas.save();
+    canvas.translate(o.dx, o.dy);
+    canvas.drawPath(_hex(r * 0.28, corner: r * 0.05), Paint()..color = _cell);
     canvas.drawPath(
-      path,
+      _hex(r * 0.28, corner: r * 0.05),
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = math.max(1, s * 0.05)
+        ..strokeWidth = math.max(1, r * 0.018)
         ..color = _edge,
     );
-    final o = owners[i];
-    if (o >= 0) {
-      TokenArt.paint(
-        canvas,
-        center,
-        s * 0.62,
-        o == 0 ? _yellow : _purple,
-        o == 0 ? 0 : 2,
-        symbolColor: _bg,
-      );
-    }
+    canvas.restore();
   }
+
+  // The opponent token being converted, half hidden behind the badge.
+  final opp = Offset(r * 0.62, r * 0.50);
+  TokenArt.paint(canvas, opp, r * 0.30, _purple, 2, symbolColor: _bg);
+
+  // The badge itself.
+  final badge = _hex(r * 0.78, corner: r * 0.16);
+  canvas.drawPath(
+    badge,
+    Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(-r * 0.6, -r * 0.7),
+        Offset(r * 0.6, r * 0.8),
+        [const Color(0xFFFFDC6B), const Color(0xFFEFA227)],
+      ),
+  );
+
+  // The X, drawn thick enough to survive the smallest launcher size.
+  final arm = r * 0.3;
+  canvas.drawPath(
+    Path()
+      ..moveTo(-arm, -arm)
+      ..lineTo(arm, arm)
+      ..moveTo(arm, -arm)
+      ..lineTo(-arm, arm),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = r * 0.17
+      ..strokeCap = StrokeCap.round
+      ..color = _bg,
+  );
+  canvas.restore();
+
   final image = await recorder.endRecording().toImage(px, px);
   final data = await image.toByteData(format: ui.ImageByteFormat.png);
   return data!.buffer.asUint8List();
