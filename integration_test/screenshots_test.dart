@@ -5,9 +5,11 @@
 //
 // Images land in store/screenshots/. It also doubles as a smoke test: every
 // screen here has to build and respond to taps on a real device.
-import 'package:flutter/material.dart';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hexadominate/main.dart' as app;
+import 'package:hexadominate/ui/widgets/hex_board.dart';
 import 'package:integration_test/integration_test.dart';
 
 Future<void> settle(WidgetTester tester, [int ms = 600]) async {
@@ -28,6 +30,8 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('capture store screenshots', (tester) async {
+    // Android needs the Flutter surface converted before it can be captured.
+    if (Platform.isAndroid) await binding.convertFlutterSurfaceToImage();
     final semantics = tester.ensureSemantics();
     app.main();
     await settle(tester, 1600);
@@ -49,11 +53,23 @@ void main() {
     await binding.takeScreenshot('04-level-intro');
     await tapText(tester, 'PLAY', settleMs: 1200);
 
-    // Select one of our tokens so the move hints are showing.
-    final myToken = find.bySemanticsLabel(RegExp(r'Hex .*, You token'));
-    if (myToken.evaluate().isNotEmpty) {
-      await tester.tap(myToken.first, warnIfMissed: false);
-      await settle(tester, 700);
+    // Select one of our tokens so the move hints are showing. Cells are
+    // painted, not widgets, so probe the board until the coaching line
+    // confirms a token is selected.
+    final board = find.byType(HexBoard);
+    final rect = tester.getRect(board);
+    const probes = <Offset>[
+      Offset(0.85, 0.5),
+      Offset(0.15, 0.5),
+      Offset(0.5, 0.15),
+      Offset(0.5, 0.85),
+      Offset(0.8, 0.25),
+      Offset(0.2, 0.75),
+    ];
+    for (final p in probes) {
+      await tester.tapAt(rect.topLeft + Offset(rect.width * p.dx, rect.height * p.dy));
+      await settle(tester, 500);
+      if (find.textContaining('Tap a highlighted hex').evaluate().isNotEmpty) break;
     }
     await binding.takeScreenshot('05-game');
 

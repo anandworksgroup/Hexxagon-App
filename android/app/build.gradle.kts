@@ -39,7 +39,8 @@ android {
         applicationId = "com.anandworks.hexadominate"
         // Android 8.0+
         minSdk = 26
-        targetSdk = flutter.targetSdkVersion
+        // Play requires new apps and updates to target the current API level.
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         manifestPlaceholders["admobAppId"] = admobAppId
