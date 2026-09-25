@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -20,6 +22,8 @@ class _HexaAppState extends ConsumerState<HexaApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Consent + SDK start happen in the background; gameplay never waits.
+    unawaited(ref.read(adServiceProvider).init());
     // First launch: offer the short tutorial on top of Home (skippable).
     if (!ref.read(settingsProvider).tutorialSeen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

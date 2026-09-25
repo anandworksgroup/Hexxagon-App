@@ -9,6 +9,7 @@ import '../engine/ai/ai_engine.dart';
 import '../engine/game_state.dart';
 import '../engine/levels/level.dart';
 import '../engine/levels/level_generator.dart';
+import '../services/ad_service.dart';
 import '../services/feedback.dart';
 import 'game_session.dart';
 
@@ -19,6 +20,14 @@ final repositoryProvider = Provider<Repository>((ref) => throw UnimplementedErro
 final levelPackProvider = Provider<LevelPack>((ref) => throw UnimplementedError());
 
 final feedbackProvider = Provider<FeedbackService>((ref) => FeedbackService());
+
+/// AdMob interstitials shown between games. Everything else in the app works
+/// offline; this is the only part that uses the network.
+final adServiceProvider = Provider<AdService>((ref) {
+  final ads = AdService();
+  ref.onDispose(ads.dispose);
+  return ads;
+});
 
 /// How AI moves are computed. Real games use a background isolate so the
 /// UI never freezes; tests can swap in a synchronous version.

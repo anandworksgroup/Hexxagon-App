@@ -116,7 +116,11 @@ class _GameScreenState extends ConsumerState<GameScreen> {
     ref.listen(gameProvider.select((v) => v?.phase), (prev, next) {
       _resultTimer?.cancel();
       if (next == GamePhase.over) {
-        _resultTimer = Timer(const Duration(milliseconds: 750), () {
+        // One interstitial per finished game, between the last move and the
+        // result screen. It never blocks: no ad means straight through.
+        _resultTimer = Timer(const Duration(milliseconds: 750), () async {
+          if (!mounted) return;
+          await ref.read(adServiceProvider).showInterstitial();
           if (mounted) setState(() => _showResult = true);
         });
       } else if (_showResult) {

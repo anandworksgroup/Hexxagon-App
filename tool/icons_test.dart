@@ -13,7 +13,6 @@ import 'package:hexadominate/ui/widgets/token_painter.dart';
 const _bg = Color(0xFF151515);
 const _cell = Color(0xFF303030);
 const _edge = Color(0xFF3B3B3B);
-const _yellow = Color(0xFFF7C948);
 const _purple = Color(0xFFA880F5);
 
 /// A flat-top hexagon with softened corners, centred on the origin.

@@ -15,6 +15,11 @@ import '../theme/app_theme.dart';
 import '../widgets/common.dart';
 import 'tutorial_screen.dart';
 
+/// Whether UMP requires a "Privacy options" entry in this region.
+final privacyOptionsRequiredProvider = FutureProvider<bool>(
+  (ref) => ref.read(adServiceProvider).privacyOptionsRequired(),
+);
+
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -117,6 +122,12 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => Navigator.of(context).push(fadeRoute<void>(const TutorialScreen())),
               ),
               _Row(title: 'Privacy', icon: Icons.lock_outline_rounded, onTap: () => _privacy(context)),
+              if (ref.watch(privacyOptionsRequiredProvider).valueOrNull ?? false)
+                _Row(
+                  title: 'Ad privacy options',
+                  icon: Icons.privacy_tip_outlined,
+                  onTap: () => ref.read(adServiceProvider).showPrivacyOptionsForm(),
+                ),
               _Row(title: 'About', icon: Icons.info_outline_rounded, onTap: () => _about(context)),
             ],
           ),

@@ -1,1 +1,4 @@
 #include "Generated.xcconfig"
+
+// AdMob application id; replace with the real one before release.
+ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511
